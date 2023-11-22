@@ -51,6 +51,8 @@ const inputs = {
 
 setupEventListeners(socket, canvasEl);
 
+// Your game logic here
+
 function loop() {
   canvas.clearRect(0, 0, canvasEl.width, canvasEl.height);
 
@@ -107,6 +109,18 @@ function loop() {
 
   for (const player of players) {
     canvas.drawImage(santaImage, player.x - cameraX, player.y - cameraY);
+    const healthBarWidth = 30; // Set the width of the health bar
+    const healthBarHeight = 5; // Set the height of the health bar
+    const healthBarX = player.x - cameraX - healthBarWidth / 2 + 12;
+    const healthBarY = player.y - cameraY - 20; // Adjust the vertical position of the health bar
+
+    canvas.fillStyle = "#00FF00"; // Green color for the health bar
+    canvas.fillRect(
+      healthBarX,
+      healthBarY,
+      healthBarWidth * (player.health / 100),
+      healthBarHeight
+    );
   }
 
   for (const snowball of snowballs) {

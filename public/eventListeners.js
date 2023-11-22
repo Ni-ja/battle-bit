@@ -11,11 +11,13 @@ const setupEventListeners = (socket, canvasEl) => {
   if (!inputs) {
     inputs = { up: false, down: false, left: false, right: false };
   }
+
   window.addEventListener("keydown", (e) => handleKeyDown(e, socket));
   window.addEventListener("keyup", (e) => handleKeyUp(e, socket));
-  window.addEventListener("click", (e) =>
+  canvasEl.addEventListener("click", (e) =>
     handleMouseClick(e, socket, canvasEl)
   );
+  window.useAbility = useAbility;
 };
 
 const handleKeyDown = (e, socket) => {
@@ -43,6 +45,12 @@ const handleKeyUp = (e, socket) => {
     inputs["right"] = false;
   } else if (e.key === "a") {
     inputs["left"] = false;
+  } else if (e.key === "1") {
+    useAbility("Ability1");
+  } else if (e.key === "2") {
+    useAbility("Ability2");
+  } else if (e.key === "3") {
+    useAbility("Ability3");
   }
   if (["a", "s", "w", "d"].includes(e.key)) {
     walkSnow.pause();
@@ -52,6 +60,9 @@ const handleKeyUp = (e, socket) => {
 };
 
 const handleMouseClick = (e, socket, canvasEl) => {
+  function useAbility(hi) {
+    console.log(123);
+  }
   const angle = Math.atan2(
     e.clientY - canvasEl.height / 2,
     e.clientX - canvasEl.width / 2
@@ -59,5 +70,10 @@ const handleMouseClick = (e, socket, canvasEl) => {
   socket.emit("snowball", angle);
 };
 
+const useAbility = (ability) => {
+  console.log(`Using ${ability}`);
+};
+
 // Call the function to set up event listeners
+
 export { setupEventListeners };

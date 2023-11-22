@@ -1,0 +1,29 @@
+body {
+  margin: 0;
+}
+
+canvas {
+  display: block; /* Ensures the canvas takes up the full width available */
+}
+
+#hud {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: space-around; /* Adjusted property */
+  width: 165px; /* Adjusted width */
+}
+
+.ability {
+  background-color: #333;
+  color: #fff;
+  cursor: pointer;
+  width: 50px; /* Adjust the width as needed */
+  height: 50px; /* Set the height equal to the width */
+  margin-right: 5px; /* Adjust the margin to your liking */
+  display: flex;
+  align-items: center; /* Vertical centering */
+  justify-content: center; /* Horizontal centering */
+}

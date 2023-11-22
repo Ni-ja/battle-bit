@@ -3,8 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <link rel="stylesheet" href="style.css" />
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>Battle Bit</title>
 
     <style>
       body {
@@ -13,8 +15,16 @@
     </style>
   </head>
   <body>
-    <canvas id="canvas"></canvas>
-    <script src="/socket.io/socket.io.js"></script>
-    <script type="module" src="/index.js"></script>
+    <div>
+      <canvas id="canvas"> </canvas>
+      <div id="hud">
+        <div class="ability" onclick="useAbility('ability1')">1</div>
+        <div class="ability" onclick="useAbility('ability2')">2</div>
+        <div class="ability" onclick="useAbility('ability3')">3</div>
+      </div>
+    </div>
   </body>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="./index.js"></script>
 </html>
