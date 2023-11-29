@@ -13,7 +13,7 @@ const setupEventListeners = (socket, canvasEl) => {
   }
 
   window.addEventListener("keydown", (e) => handleKeyDown(e, socket));
-  window.addEventListener("keyup", (e) => handleKeyUp(e, socket));
+  window.addEventListener("keyup", (e) => handleKeyUp(e, socket, canvasEl));
   canvasEl.addEventListener("click", (e) =>
     handleMouseClick(e, socket, canvasEl)
   );
@@ -36,7 +36,7 @@ const handleKeyDown = (e, socket) => {
   socket.emit("inputs", inputs);
 };
 
-const handleKeyUp = (e, socket) => {
+const handleKeyUp = (e, socket, canvasEl) => {
   if (e.key === "w") {
     inputs["up"] = false;
   } else if (e.key === "s") {
@@ -47,6 +47,7 @@ const handleKeyUp = (e, socket) => {
     inputs["left"] = false;
   } else if (e.key === "1") {
     useAbility("Ability1");
+    handleMouseClick(e, socket, canvasEl);
   } else if (e.key === "2") {
     useAbility("Ability2");
   } else if (e.key === "3") {
@@ -60,9 +61,6 @@ const handleKeyUp = (e, socket) => {
 };
 
 const handleMouseClick = (e, socket, canvasEl) => {
-  function useAbility(hi) {
-    console.log(123);
-  }
   const angle = Math.atan2(
     e.clientY - canvasEl.height / 2,
     e.clientX - canvasEl.width / 2

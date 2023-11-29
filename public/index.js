@@ -1,21 +1,47 @@
-import { setupEventListeners } from "./eventListeners.js";
-
 const mapImage = new Image();
-mapImage.src = "./assets/images/snowy-sheet.png";
+mapImage.src = "/assets/images/snowy-sheet.png";
 
 const santaImage = new Image();
-santaImage.src = "./assets/images/santa.png";
+santaImage.src = "/assets/images/santa.png";
+
+const walkSnow = new Audio("/assets/audio/walk-snow.mp3");
 
 const canvasEl = document.getElementById("canvas");
 canvasEl.width = window.innerWidth;
 canvasEl.height = window.innerHeight;
 const canvas = canvasEl.getContext("2d");
 
-const socket = io(`ws://localhost:3000`);
+const socket = io();
 
 const localTracks = {
   audioTrack: null,
 };
+
+let isPlaying = true;
+
+const remoteUsers = {};
+window.remoteUsers = remoteUsers;
+
+const uid = Math.floor(Math.random() * 1000000);
+
+const options = {
+  appid: "eee1672fa7ef4b83bc7810da003a07bb",
+  channel: "game",
+  uid,
+  token: null,
+};
+
+function handleUserPublished(user, mediaType) {
+  const id = user.uid;
+  remoteUsers[id] = user;
+  subscribe(user, mediaType);
+}
+
+function handleUserUnpublished(user) {
+  const id = user.uid;
+  delete remoteUsers[id];
+}
+
 let groundMap = [[]];
 let decalMap = [[]];
 let players = [];
@@ -31,7 +57,6 @@ socket.on("connect", () => {
 socket.on("map", (loadedMap) => {
   groundMap = loadedMap.ground;
   decalMap = loadedMap.decal;
-  console.log("decalMap", decalMap);
 });
 
 socket.on("players", (serverPlayers) => {
@@ -49,9 +74,46 @@ const inputs = {
   right: false,
 };
 
-setupEventListeners(socket, canvasEl);
+window.addEventListener("keydown", (e) => {
+  if (e.key === "w") {
+    inputs["up"] = true;
+  } else if (e.key === "s") {
+    inputs["down"] = true;
+  } else if (e.key === "d") {
+    inputs["right"] = true;
+  } else if (e.key === "a") {
+    inputs["left"] = true;
+  }
+  if (["a", "s", "w", "d"].includes(e.key) && walkSnow.paused) {
+    // walkSnow.play();
+  }
+  socket.emit("inputs", inputs);
+});
 
-// Your game logic here
+window.addEventListener("keyup", (e) => {
+  if (e.key === "w") {
+    inputs["up"] = false;
+  } else if (e.key === "s") {
+    inputs["down"] = false;
+  } else if (e.key === "d") {
+    inputs["right"] = false;
+  } else if (e.key === "a") {
+    inputs["left"] = false;
+  }
+  if (["a", "s", "w", "d"].includes(e.key)) {
+    walkSnow.pause();
+    walkSnow.currentTime = 0;
+  }
+  socket.emit("inputs", inputs);
+});
+
+window.addEventListener("click", (e) => {
+  const angle = Math.atan2(
+    e.clientY - canvasEl.height / 2,
+    e.clientX - canvasEl.width / 2
+  );
+  socket.emit("snowball", angle);
+});
 
 function loop() {
   canvas.clearRect(0, 0, canvasEl.width, canvasEl.height);
@@ -109,18 +171,6 @@ function loop() {
 
   for (const player of players) {
     canvas.drawImage(santaImage, player.x - cameraX, player.y - cameraY);
-    const healthBarWidth = 30; // Set the width of the health bar
-    const healthBarHeight = 5; // Set the height of the health bar
-    const healthBarX = player.x - cameraX - healthBarWidth / 2 + 12;
-    const healthBarY = player.y - cameraY - 20; // Adjust the vertical position of the health bar
-
-    canvas.fillStyle = "#00FF00"; // Green color for the health bar
-    canvas.fillRect(
-      healthBarX,
-      healthBarY,
-      healthBarWidth * (player.health / 100),
-      healthBarHeight
-    );
   }
 
   for (const snowball of snowballs) {

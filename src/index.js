@@ -7,6 +7,8 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer);
 
+const PORT = process.env.PORT || 3000;
+
 const loadMap = require("./mapLoader");
 
 const SPEED = 5;
@@ -19,21 +21,6 @@ let players = [];
 let snowballs = [];
 const inputsMap = {};
 let ground2D, decal2D;
-
-const FIXED_GAME_WIDTH = 1200;
-const FIXED_GAME_HEIGHT = 675;
-
-function calculateDistanceInYards(point1, point2) {
-  const scale = Math.min(screenWidthScale, screenHeightScale);
-
-  const scaledWidth = FIXED_GAME_WIDTH * scale;
-  const scaledHeight = FIXED_GAME_HEIGHT * scale;
-
-  const deltaXInYards = (point1.x - point2.x) / scaledWidth;
-  const deltaYInYards = (point1.y - point2.y) / scaledHeight;
-
-  return Math.sqrt(deltaXInYards ** 2 + deltaYInYards ** 2);
-}
 
 function isColliding(rect1, rect2) {
   return (
@@ -107,11 +94,11 @@ function tick(delta) {
 
     for (const player of players) {
       if (player.id === snowball.playerId) continue;
-      const distanceInYards = calculateDistanceInYards(
-        { x: player.x + PLAYER_SIZE / 2, y: player.y + PLAYER_SIZE / 2 },
-        { x: snowball.x, y: snowball.y }
+      const distance = Math.sqrt(
+        (player.x + PLAYER_SIZE / 2 - snowball.x) ** 2 +
+          (player.y + PLAYER_SIZE / 2 - snowball.y) ** 2
       );
-      if (distanceInYards <= 1) {
+      if (distance <= PLAYER_SIZE / 2) {
         player.x = 0;
         player.y = 0;
         snowball.timeLeft = -1;
@@ -142,9 +129,6 @@ async function main() {
       id: socket.id,
       x: 800,
       y: 800,
-      health: 100,
-      armor: 10,
-      level: 1,
     });
 
     socket.emit("map", {
@@ -159,6 +143,11 @@ async function main() {
     socket.on("mute", (isMuted) => {
       const player = players.find((player) => player.id === socket.id);
       player.isMuted = isMuted;
+    });
+
+    socket.on("voiceId", (voiceId) => {
+      const player = players.find((player) => player.id === socket.id);
+      player.voiceId = voiceId;
     });
 
     socket.on("snowball", (angle) => {
@@ -179,7 +168,7 @@ async function main() {
 
   app.use(express.static("public"));
 
-  httpServer.listen(3000);
+  httpServer.listen(PORT);
 
   let lastUpdate = Date.now();
   setInterval(() => {
