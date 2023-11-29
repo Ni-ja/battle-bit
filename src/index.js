@@ -13,12 +13,50 @@ const loadMap = require("./mapLoader");
 
 const SPEED = 5;
 const TICK_RATE = 30;
-const SNOWBALL_SPEED = 11;
 const PLAYER_SIZE = 32;
 const TILE_SIZE = 32;
 
+function debug(message) {
+  io.emit("debugMessage", message);
+}
+
+const abilities = {
+  default: {
+    effect: (player) => {
+      // Apply default snowball effect
+      player.health = player.health - 10;
+      console.log(`${player.id} hit by default snowball!`);
+    },
+    range: 0, // No explosion radius for default
+    timeLeft: 1000,
+    speed: 11,
+    fillStyle: "#333333",
+  },
+  explosive: {
+    effect: (player) => {
+      // Apply explosive effect to player
+      console.log(`${player.id} hit by explosive snowball!`);
+      debug(`${player.id} hit by explosive snowball!`);
+    },
+    range: 100,
+    timeLeft: 800, // Explosion radius
+    speed: 16,
+    fillStyle: "#000000",
+  },
+  freeze: {
+    effect: (player) => {
+      // Apply freezing effect to player
+      console.log("Player hit by freezing snowball!");
+    },
+    duration: 3000,
+    timeLeft: 2000,
+    speed: 5,
+    fillStyle: "#FFFFFF",
+  },
+};
+
 let players = [];
-let snowballs = [];
+let attacks = [];
 const inputsMap = {};
 let ground2D, decal2D;
 
@@ -87,31 +125,36 @@ function tick(delta) {
     }
   }
 
-  for (const snowball of snowballs) {
-    snowball.x += Math.cos(snowball.angle) * SNOWBALL_SPEED;
-    snowball.y += Math.sin(snowball.angle) * SNOWBALL_SPEED;
-    snowball.timeLeft -= delta;
+  for (const attack of attacks) {
+    attack.x += Math.cos(attack.angle) * attack.speed;
+    attack.y += Math.sin(attack.angle) * attack.speed;
+    attack.timeLeft -= delta;
 
     for (const player of players) {
-      if (player.id === snowball.playerId) continue;
+      if (player.id === attack.playerId) continue;
       const distance = Math.sqrt(
-        (player.x + PLAYER_SIZE / 2 - snowball.x) ** 2 +
-          (player.y + PLAYER_SIZE / 2 - snowball.y) ** 2
+        (player.x + PLAYER_SIZE / 2 - attack.x) ** 2 +
+          (player.y + PLAYER_SIZE / 2 - attack.y) ** 2
       );
       if (distance <= PLAYER_SIZE / 2) {
-        player.x = 0;
-        player.y = 0;
-        snowball.timeLeft = -1;
+        // Apply snowball effect to player
+        if (attack.ability) {
+          abilities[attack.ability].effect(player);
+        } else {
+          // Apply default snowball effect
+          console.log("Wrong snowball");
+        }
+        attack.timeLeft = -1;
         break;
       }
     }
   }
-  snowballs = snowballs.filter((snowball) => snowball.timeLeft > 0);
+
+  attacks = attacks.filter((attack) => attack.timeLeft > 0);
 
   io.emit("players", players);
-  io.emit("snowballs", snowballs);
+  io.emit("attacks", attacks);
 }
-
 async function main() {
   ({ ground2D, decal2D } = await loadMap());
 
@@ -129,6 +172,8 @@ async function main() {
       id: socket.id,
       x: 800,
       y: 800,
+      health: 100,
+      maxHealth: 100,
     });
 
     socket.emit("map", {
@@ -140,24 +185,19 @@ async function main() {
       inputsMap[socket.id] = inputs;
     });
 
-    socket.on("mute", (isMuted) => {
+    socket.on("attack", (angle, ability) => {
+      debug(ability);
       const player = players.find((player) => player.id === socket.id);
-      player.isMuted = isMuted;
-    });
-
-    socket.on("voiceId", (voiceId) => {
-      const player = players.find((player) => player.id === socket.id);
-      player.voiceId = voiceId;
-    });
-
-    socket.on("snowball", (angle) => {
-      const player = players.find((player) => player.id === socket.id);
-      snowballs.push({
+      const attack = abilities[ability];
+      attacks.push({
         angle,
         x: player.x,
         y: player.y,
-        timeLeft: 1000,
+        timeLeft: attack.timeLeft,
         playerId: socket.id,
+        ability: ability,
+        speed: attack.speed,
+        fillStyle: attack.fillStyle, // Add ability parameter
       });
     });
 

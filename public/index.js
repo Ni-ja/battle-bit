@@ -24,29 +24,11 @@ window.remoteUsers = remoteUsers;
 
 const uid = Math.floor(Math.random() * 1000000);
 
-const options = {
-  appid: "eee1672fa7ef4b83bc7810da003a07bb",
-  channel: "game",
-  uid,
-  token: null,
-};
-
-function handleUserPublished(user, mediaType) {
-  const id = user.uid;
-  remoteUsers[id] = user;
-  subscribe(user, mediaType);
-}
-
-function handleUserUnpublished(user) {
-  const id = user.uid;
-  delete remoteUsers[id];
-}
-
 let groundMap = [[]];
 let decalMap = [[]];
 let players = [];
-let snowballs = [];
-
+let attacks = [];
+let selectedAbility = "default";
 const TILE_SIZE = 32;
 const SNOWBALL_RADIUS = 5;
 
@@ -63,8 +45,8 @@ socket.on("players", (serverPlayers) => {
   players = serverPlayers;
 });
 
-socket.on("snowballs", (serverSnowballs) => {
-  snowballs = serverSnowballs;
+socket.on("attacks", (serverAttacks) => {
+  attacks = serverAttacks;
 });
 
 const inputs = {
@@ -73,6 +55,47 @@ const inputs = {
   left: false,
   right: false,
 };
+const debugWindow = document.createElement("div");
+debugWindow.style.position = "fixed";
+debugWindow.style.top = "0";
+debugWindow.style.left = "50%";
+debugWindow.style.transform = "translateX(-50%)";
+debugWindow.style.padding = "10px";
+debugWindow.style.backgroundColor = "#000";
+debugWindow.style.color = "#fff";
+debugWindow.style.opacity = 0;
+debugWindow.style.transition = "opacity 0.3s ease-in-out";
+
+document.body.appendChild(debugWindow);
+
+const calculateHealthBarPercentage = (player) => {
+  const healthPercentage = (player.health / player.maxHealth) * 100;
+  return Math.min(Math.max(healthPercentage, 0), 100);
+};
+
+function drawHealthBar(player, cameraX, cameraY) {
+  const healthBarPercentage = calculateHealthBarPercentage(player);
+  console.log(healthBarPercentage);
+  const healthBarWidth = (healthBarPercentage / 100) * 50;
+
+  canvas.fillStyle = healthBarPercentage > 50 ? "#00FF00" : "#FF0000"; // Adjust color based on health percentage
+  canvas.fillRect(
+    player.x - cameraX - 10,
+    player.y - cameraY - 20,
+    healthBarWidth,
+    5
+  );
+}
+
+socket.on("debugMessage", (message) => {
+  debugWindow.textContent = message;
+  debugWindow.style.opacity = 1;
+  console.log(message);
+
+  setTimeout(() => {
+    debugWindow.style.opacity = 0;
+  }, 1000);
+});
 
 window.addEventListener("keydown", (e) => {
   if (e.key === "w") {
@@ -85,7 +108,7 @@ window.addEventListener("keydown", (e) => {
     inputs["left"] = true;
   }
   if (["a", "s", "w", "d"].includes(e.key) && walkSnow.paused) {
-    // walkSnow.play();
+    walkSnow.play();
   }
   socket.emit("inputs", inputs);
 });
@@ -99,6 +122,12 @@ window.addEventListener("keyup", (e) => {
     inputs["right"] = false;
   } else if (e.key === "a") {
     inputs["left"] = false;
+  } else if (e.key === "1") {
+    selectedAbility = "default";
+  } else if (e.key === "2") {
+    selectedAbility = "explosive";
+  } else if (e.key === "3") {
+    selectedAbility = "freeze";
   }
   if (["a", "s", "w", "d"].includes(e.key)) {
     walkSnow.pause();
@@ -112,7 +141,7 @@ window.addEventListener("click", (e) => {
     e.clientY - canvasEl.height / 2,
     e.clientX - canvasEl.width / 2
   );
-  socket.emit("snowball", angle);
+  socket.emit("attack", angle, selectedAbility);
 });
 
 function loop() {
@@ -171,14 +200,15 @@ function loop() {
 
   for (const player of players) {
     canvas.drawImage(santaImage, player.x - cameraX, player.y - cameraY);
+    drawHealthBar(player, cameraX, cameraY);
   }
 
-  for (const snowball of snowballs) {
-    canvas.fillStyle = "#FFFFFF";
+  for (const attack of attacks) {
+    canvas.fillStyle = attack.fillStyle;
     canvas.beginPath();
     canvas.arc(
-      snowball.x - cameraX,
-      snowball.y - cameraY,
+      attack.x - cameraX,
+      attack.y - cameraY,
       SNOWBALL_RADIUS,
       0,
       2 * Math.PI
